@@ -107,8 +107,13 @@ var trackingSDKPatterns = []struct {
 	{regexp.MustCompile(`(?i)(mixpanel)`), "Mixpanel"},
 	{regexp.MustCompile(`(?i)(@segment/|analytics-react-native)`), "Segment"},
 	{regexp.MustCompile(`(?i)(branch\.io|react-native-branch)`), "Branch"},
-	{regexp.MustCompile(`(?i)(google.*ads|GADMobileAds|admob)`), "Google Ads/AdMob"},
-	{regexp.MustCompile(`(?i)(unity.*ads|UnityAds)`), "Unity Ads"},
+	// Anchored to actual AdMob tokens rather than a bare "google...ads"
+	// substring: that unanchored form matched inside ordinary identifiers
+	// like `loadSdk` (Google Sign-In) or `downloads`/`uploads`/`threads`
+	// whenever "google" appeared earlier on the same line, producing a
+	// CRITICAL ATT finding on apps that ship no ad SDK at all.
+	{regexp.MustCompile(`(?i)(google-mobile-ads|googlemobileads|GADMobileAds|GADApplicationIdentifier|\badmob\b)`), "Google Ads/AdMob"},
+	{regexp.MustCompile(`(?i)(unity-ads|unityads|UnityAds|com\.unity3d\.ads)`), "Unity Ads"},
 	{regexp.MustCompile(`(?i)(applovin|AppLovinSDK)`), "AppLovin"},
 	{regexp.MustCompile(`(?i)(ironSource|IronSource)`), "ironSource"},
 }
