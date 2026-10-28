@@ -3,6 +3,7 @@ package privacy
 import (
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 )
 
@@ -36,6 +37,39 @@ func TestRequiredReasonDetectsRealCallSites(t *testing.T) {
 	for api, found := range want {
 		if !found {
 			t.Errorf("expected %q detected from a real call site; DetectedAPIs=%v", api, res.DetectedAPIs)
+		}
+	}
+}
+
+// The bare stat()/fstat()/lstat() patterns were case-insensitive, so on a
+// React/React Native project (TS/JS is in File Timestamp's Languages list)
+// they matched any PascalCase identifier shaped like `function Stat(...)`
+// — the common component-naming convention for a small stat-display widget
+// — and produced a CRITICAL "Required Reason API used but not declared"
+// finding on apps that never touch a real file-timestamp API. Found by
+// running greenlight against runner-map, which declares nine such `Stat`
+// components across its screens/components.
+func TestFileTimestampPatternIgnoresPascalCaseStatComponent(t *testing.T) {
+	dir := t.TempDir()
+	writeFile(t, dir, "StatCard.tsx", `
+function Stat({ label, value }: { label: string; value: string }) {
+  return <View><Text>{label}</Text><Text>{value}</Text></View>;
+}
+`)
+
+	res, err := Scan(dir)
+	if err != nil {
+		t.Fatalf("Scan: %v", err)
+	}
+
+	for _, api := range res.DetectedAPIs {
+		if api == "File Timestamp" {
+			t.Fatalf("a `function Stat(...)` component falsely matched as File Timestamp API usage; DetectedAPIs=%v", res.DetectedAPIs)
+		}
+	}
+	for _, f := range res.Findings {
+		if strings.Contains(f.Title, "File Timestamp") {
+			t.Fatalf("expected no File Timestamp finding for a Stat() component, got: %+v", f)
 		}
 	}
 }

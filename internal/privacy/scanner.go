@@ -46,7 +46,16 @@ var requiredReasonAPIs = []RequiredReasonAPI{
 		Patterns: []*regexp.Regexp{
 			regexp.MustCompile(`(?i)(\.creationDate|\.modificationDate|\.contentModificationDate|fileModificationDate|URLResourceKey\.contentModification)`),
 			regexp.MustCompile(`(?i)(NSFileCreationDate|NSFileModificationDate)`),
-			regexp.MustCompile(`(?i)(\bstat\s*\(|\bfstat\s*\(|\blstat\s*\(|getattrlist)`),
+			// Case-sensitive on purpose: stat()/fstat()/lstat() are lowercase
+			// POSIX C calls. Matching them case-insensitively made this fire
+			// on any TS/JS identifier named like the common React/RN
+			// component convention `function Stat(...)` (and similarly
+			// capitalized helpers), producing a CRITICAL "will be rejected"
+			// Required Reason API finding on apps that never touch a file
+			// timestamp API at all. getattrlist has no such casing collision,
+			// so it stays case-insensitive.
+			regexp.MustCompile(`(\bstat\s*\(|\bfstat\s*\(|\blstat\s*\()`),
+			regexp.MustCompile(`(?i)getattrlist`),
 		},
 		Languages:   []string{"swift", "objc", "typescript", "javascript"},
 		Description: "Accessing file timestamps (creation date, modification date)",
