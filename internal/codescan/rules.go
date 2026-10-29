@@ -518,6 +518,14 @@ func stripStringsAndComments(line string) string {
 // Extracting each literal's real content first makes that cross-literal span
 // impossible: "android" only ever matches if some actual literal is
 // "android", "my android app", etc.
+//
+// A backslash-escaped quote (`\"`, `\'`, or an escaped backtick inside a JS
+// template literal) does not end the literal — it's the same escaping every
+// common source language uses for a literal quote character inside a string.
+// Without honoring that, a quote preceded by `\` (e.g. the apostrophe in
+// `'it\'s the android app'`) closed the literal early: everything after the
+// escaped quote fell outside any literal and was silently dropped from the
+// extracted content, so a real competitor mention after it was missed.
 func extractStringLiterals(line string) []string {
 	var literals []string
 	var cur strings.Builder
@@ -526,6 +534,15 @@ func extractStringLiterals(line string) []string {
 	for i := 0; i < len(line); i++ {
 		c := line[i]
 		if inStr {
+			if c == '\\' && i+1 < len(line) {
+				// Keep the escaped character as literal content (not a
+				// delimiter) and skip past it so it can't be mistaken for
+				// the closing quote.
+				cur.WriteByte(c)
+				i++
+				cur.WriteByte(line[i])
+				continue
+			}
 			if c == quote {
 				inStr = false
 				literals = append(literals, cur.String())
