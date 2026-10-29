@@ -140,6 +140,32 @@ func AllRules() []Rule {
 			firstMatchOnly:     true,
 		},
 		&PatternRule{
+			id:        "subscription-no-renewal-disclosure",
+			title:     "Auto-renewable subscription without renewal disclosure",
+			guideline: "3.1.2",
+			severity:  SeverityHigh,
+			detail:    "Auto-renewable subscriptions must disclose, near the purchase button, that the subscription renews automatically unless cancelled, plus its price/period and a link to Terms of Use/Privacy Policy. This is the single most common 3.1.2 rejection and is distinct from the 3.1.1 restore-purchases requirement.",
+			fix:       "Add subscription disclosure text next to the purchase button: title, length, price, and that it 'automatically renews unless cancelled', plus a visible link to your Terms of Use (EULA) and Privacy Policy.",
+			languages: []string{"swift", "objc", "typescript", "javascript"},
+			patterns: []*regexp.Regexp{
+				// Subscription-specific SDK symbols, not generic one-time IAP
+				// (that's iap-no-restore/§3.1.1) — auto-renewal disclosure is a
+				// §3.1.2 requirement unique to recurring subscriptions.
+				regexp.MustCompile(`(?i)(subscriptionPeriod|autoRenewable|Product\.SubscriptionInfo|SKProductSubscriptionPeriod)`),
+				regexp.MustCompile(`(?i)(requestSubscription\s*\(|getSubscriptions\s*\()`),
+				regexp.MustCompile(`(?i)(purchasePackage|PurchasesPackage)`),
+			},
+			antiPatterns: []*regexp.Regexp{
+				// The required disclosure wording itself ("auto-renews unless
+				// cancelled") — if it exists anywhere in the project, assume the
+				// paywall actually shows it (same static-can-only-confirm-string-
+				// presence caveat as account-no-delete/iap-no-restore below).
+				regexp.MustCompile(`(?i)(auto-?renew|automatically renew|renews automatically|renewed automatically)`),
+			},
+			antiPatternsGlobal: true,
+			firstMatchOnly:     true,
+		},
+		&PatternRule{
 			id:        "account-no-delete",
 			title:     "Account creation without account deletion",
 			guideline: "5.1.1",
