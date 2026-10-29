@@ -32,7 +32,19 @@ var reSubscriptionAPI = regexp.MustCompile(`(?i)(BillingClient\.ProductType\.SUB
 // ("automatic renewal terms"): the subscription renews unless the user
 // cancels. Same wording shape as codescan's iOS §3.1.2 anti-pattern, since the
 // disclosure requirement is the same user-facing sentence on either platform.
-var reRenewalDisclosure = regexp.MustCompile(`(?i)(auto-?renew|automatically renew|renews automatically|renewed automatically)`)
+//
+// "renew" is deliberately case-SENSITIVE (lowercase) for the bare
+// "auto-renew(s)" form, matching codescan's identical fix (899cef0) for the
+// same bug shape: Play Billing's own `Purchase.isAutoRenewing()` field --
+// read routinely by any real subscription-status check, in the same file as
+// reSubscriptionAPI's trigger symbols -- camelCases "Renewing" with a capital
+// R, while real user-facing disclosure prose never does ("auto-renews unless
+// cancelled", "automatically renew"). Under the old case-insensitive match,
+// merely reading purchase.isAutoRenewing satisfied the anti-pattern and
+// silently suppressed the Subscriptions finding project-wide, even with zero
+// disclosure text anywhere. "auto" keeps optional capitalization for
+// sentence-initial disclosure text ("Auto-renews unless...").
+var reRenewalDisclosure = regexp.MustCompile(`[Aa]uto-?renews?\b|(?i:automatically renew|renews? automatically|renewed automatically)`)
 
 // subscriptionSignals is what the policy rule needs out of the app's Android
 // source — both findable only by actually reading .kt/.java/.xml content,
