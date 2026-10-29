@@ -322,7 +322,13 @@ func AllRules() []Rule {
 	// Crypto apps carry App Review obligations (Guideline 3.1.5(b)) that a code
 	// scan can detect but not verify — organization enrollment, exchange
 	// licensing, a legal opinion. Append those advisories last.
-	return append(rules, cryptoComplianceRules()...)
+	rules = append(rules, cryptoComplianceRules()...)
+
+	// Permission-gated APIs (camera, microphone, photo library, location)
+	// used with no matching Info.plist usage-description key — see
+	// rules_permissions.go for why this is a distinct gap from
+	// vague-purpose-string / missing-privacy-keys.
+	return append(rules, permissionUsageRules()...)
 }
 
 // PatternRule matches regex patterns against file lines.
