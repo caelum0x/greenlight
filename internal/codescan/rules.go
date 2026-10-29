@@ -322,7 +322,12 @@ func AllRules() []Rule {
 	// Crypto apps carry App Review obligations (Guideline 3.1.5(b)) that a code
 	// scan can detect but not verify — organization enrollment, exchange
 	// licensing, a legal opinion. Append those advisories last.
-	return append(rules, cryptoComplianceRules()...)
+	rules = append(rules, cryptoComplianceRules()...)
+
+	// Apps shipping a UGC/chat/social SDK carry a Guideline 1.2 obligation
+	// (filtering, reporting, blocking, moderation) a code scan can detect the
+	// absence of but not verify is adequate. Append last, same as crypto above.
+	return append(rules, ugcComplianceRules()...)
 }
 
 // PatternRule matches regex patterns against file lines.
