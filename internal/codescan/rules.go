@@ -156,6 +156,37 @@ func AllRules() []Rule {
 			antiPatternsGlobal: true,
 			firstMatchOnly:     true,
 		},
+		&PatternRule{
+			id:        "kids-external-link-no-parental-gate",
+			title:     "Child-directed app has external links/purchases without a parental gate",
+			guideline: "1.3",
+			severity:  SeverityHigh,
+			detail:    "Apps that declare themselves child-directed must show a parental gate before external links, web views, App Store product pages, or purchase flows.",
+			fix:       "Add a parental gate (e.g. a simple age or math challenge) before any external link, web view, App Store product page, or purchase flow.",
+			languages: []string{"swift", "objc", "typescript", "javascript"},
+			// This rule only even runs for apps that have flagged themselves
+			// child-directed (requireGlobal below) — otherwise every app linking
+			// out to a browser or StoreKit would trip a parental-gate warning it
+			// doesn't need, which is exactly the Kids Category's own scope per
+			// Guideline 1.3.
+			requireGlobal: []*regexp.Regexp{
+				// Covers all three real-world shapes: the iOS/RN property or
+				// object-literal assignment (`tagForChildDirectedTreatment: true` /
+				// `= true`), the Android builder setter
+				// (`setTagForChildDirectedTreatment(true)`), and the legacy AdMob
+				// extras dictionary key (`GADIsChildDirectedTreatmentEnabled`,
+				// which is only ever used to mean "yes" when present at all).
+				regexp.MustCompile(`(?i)(GADIsChildDirectedTreatmentEnabled|(set)?tagForChildDirectedTreatment\s*[:=(]\s*(true|RequestConfiguration\.TAG_FOR_CHILD_DIRECTED_TREATMENT_TRUE)|(set)?tagForUnderAgeOfConsent\s*[:=(]\s*(true|RequestConfiguration\.TAG_FOR_UNDER_AGE_OF_CONSENT_TRUE))`),
+			},
+			patterns: []*regexp.Regexp{
+				regexp.MustCompile(`(?i)(SFSafariViewController|UIApplication\.shared\.open\s*\(|Linking\.openURL|SKStoreProductViewController|SKPaymentQueue|StoreKit\.|react-native-iap|RevenueCat|Purchases\.(configure|purchasePackage))`),
+			},
+			antiPatterns: []*regexp.Regexp{
+				regexp.MustCompile(`(?i)(parental\s*gate|ParentalGate|ask\s*(a|your)\s*parent|are\s*you\s*an\s*adult)`),
+			},
+			antiPatternsGlobal: true,
+			firstMatchOnly:     true,
+		},
 
 		// MEDIUM - May cause issues
 		&PatternRule{
@@ -338,6 +369,7 @@ type PatternRule struct {
 	literalPatterns    []*regexp.Regexp // Matched against each string literal's own content, not the raw line (see extractStringLiterals)
 	antiPatterns       []*regexp.Regexp // If found anywhere in project, suppress this rule
 	antiPatternsGlobal bool             // Check anti-patterns across all files, not just current
+	requireGlobal      []*regexp.Regexp // If non-empty, this rule only runs when one of these matches anywhere in project (AND-gate; see GlobalPreconditionRule)
 	ignorePatterns     []*regexp.Regexp // Lines matching these are skipped
 	countThreshold     int              // Only report if count exceeds this
 	firstMatchOnly     bool             // Project-level fact: cap to one per file; scanner collapses to one per project
@@ -354,6 +386,21 @@ func (r *PatternRule) AntiPatternMatched(fc FileContext) bool {
 	for _, line := range fc.Lines {
 		for _, ap := range r.antiPatterns {
 			if ap.MatchString(line) {
+				return true
+			}
+		}
+	}
+	return false
+}
+
+func (r *PatternRule) HasGlobalPrecondition() bool {
+	return len(r.requireGlobal) > 0
+}
+
+func (r *PatternRule) PreconditionMatched(fc FileContext) bool {
+	for _, line := range fc.Lines {
+		for _, gp := range r.requireGlobal {
+			if gp.MatchString(line) {
 				return true
 			}
 		}
