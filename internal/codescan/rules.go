@@ -160,7 +160,19 @@ func AllRules() []Rule {
 				// cancelled") — if it exists anywhere in the project, assume the
 				// paywall actually shows it (same static-can-only-confirm-string-
 				// presence caveat as account-no-delete/iap-no-restore below).
-				regexp.MustCompile(`(?i)(auto-?renew|automatically renew|renews automatically|renewed automatically)`),
+				//
+				// "renew" is deliberately case-SENSITIVE (lowercase) here, unlike
+				// the rest of this file: the camelCase StoreKit/RevenueCat symbols
+				// this rule's own trigger patterns match (autoRenewable,
+				// autoRenewStatus, willAutoRenew, ...) always capitalize the "Renew"
+				// half, while real user-facing disclosure prose never does ("auto-
+				// renews unless cancelled", "automatically renew"). Under the old
+				// case-insensitive match, the trigger API names themselves
+				// satisfied the anti-pattern, silently GREENLITing every app that
+				// merely calls the subscription API without ever showing the
+				// disclosure text. "auto" keeps optional capitalization for
+				// sentence-initial disclosure text ("Auto-renews unless...").
+				regexp.MustCompile(`[Aa]uto-?renews?\b|(?i:automatically renew|renews? automatically|renewed automatically)`),
 			},
 			antiPatternsGlobal: true,
 			firstMatchOnly:     true,

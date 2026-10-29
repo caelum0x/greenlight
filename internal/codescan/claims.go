@@ -37,10 +37,16 @@ var (
 	reSocialLogin     = regexp.MustCompile(`(?i)(google.*sign.*in|GIDSignIn|GoogleSignin|facebook.*login|FBSDKLoginManager|LoginManager\.logIn)`)
 	reSubscription    = regexp.MustCompile(`(?i)(subscriptionPeriod|autoRenewable|Product\.SubscriptionInfo|SKProductSubscriptionPeriod|requestSubscription\s*\(|getSubscriptions\s*\(|purchasePackage|PurchasesPackage)`)
 
-	reDeleteAccount     = regexp.MustCompile(`(?i)(deleteAccount|delete.*account|remove.*account|account.*delet|close.*account|closeAccount|cancel.*account|delete.*my.*account|erase.*account)`)
-	reRestore           = regexp.MustCompile(`(?i)(restoreCompletedTransactions|restore.*purchase|restorePurchase|customerInfo|syncPurchases)`)
-	reSiwA              = regexp.MustCompile(`(?i)(ASAuthorizationAppleIDProvider|SignInWithApple|apple.*auth|appleAuth|expo-apple-authentication)`)
-	reRenewalDisclosure = regexp.MustCompile(`(?i)(auto-?renew|automatically renew|renews automatically|renewed automatically)`)
+	reDeleteAccount = regexp.MustCompile(`(?i)(deleteAccount|delete.*account|remove.*account|account.*delet|close.*account|closeAccount|cancel.*account|delete.*my.*account|erase.*account)`)
+	reRestore       = regexp.MustCompile(`(?i)(restoreCompletedTransactions|restore.*purchase|restorePurchase|customerInfo|syncPurchases)`)
+	reSiwA          = regexp.MustCompile(`(?i)(ASAuthorizationAppleIDProvider|SignInWithApple|apple.*auth|appleAuth|expo-apple-authentication)`)
+	// "renew" is deliberately case-SENSITIVE (lowercase) for the bare "auto-
+	// renew(s)" form, unlike the rest of this file — see the matching comment
+	// on subscription-no-renewal-disclosure's antiPatterns in rules.go. Without
+	// it, this same regex also matched the camelCase trigger symbols
+	// themselves (autoRenewable, autoRenewStatus, willAutoRenew), so merely
+	// calling the subscription API set HasRenewalDisclosure true.
+	reRenewalDisclosure = regexp.MustCompile(`[Aa]uto-?renews?\b|(?i:automatically renew|renews? automatically|renewed automatically)`)
 )
 
 // DetectClaims walks the project — reusing the scanner's file collection and
